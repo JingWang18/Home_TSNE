@@ -11,12 +11,7 @@
 
 rm -r ./utils/__pycache__
 rm -r ./model/__pycache__
-python train.py --task AC --source Art --target Clipart --data_list_root /home/peter/Desktop/CV-Datasets/OfficeHome/list --data_root /home/peter/Desktop/CV-Datasets/OfficeHome/ --epoch 120 --revLayer 1
-sleep 60
-
-rm -r ./utils/__pycache__
-rm -r ./model/__pycache__
-python train.py --task AC --source Art --target Clipart --data_list_root /home/peter/Desktop/CV-Datasets/OfficeHome/list --data_root /home/peter/Desktop/CV-Datasets/OfficeHome/ --epoch 120 --revLayer 3
+python train.py --task AC --source Art --target Clipart --data_list_root /home/peter/Desktop/CV-Datasets/OfficeHome/list --data_root /home/peter/Desktop/CV-Datasets/OfficeHome/ --epoch 120
 sleep 60
 
 # rm -r ./utils/__pycache__
