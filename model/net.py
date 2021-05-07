@@ -7,19 +7,35 @@ from torch.autograd import Variable, Function
 import torch.nn.functional as F
 import math
 
-class GradReverse(Function):
-    def __init__(self, lambd):
-        self.lambd = lambd
+# class GradReverse(Function):
+#     def __init__(self, lambd):
+#         self.lambd = lambd
 
+#     def forward(self, x):
+#         return x.view_as(x)
+
+#     def backward(self, grad_output):
+#         return (grad_output * self.lambd)
+
+
+# def grad_reverse(x, lambd=-1.0):
+#     return GradReverse(lambd)(x)
+
+class GradReverse(Function):
+
+    @staticmethod
     def forward(self, x):
         return x.view_as(x)
 
+    @staticmethod
     def backward(self, grad_output):
-        return (grad_output * self.lambd)
+        return (grad_output * -1.0)
 
 
-def grad_reverse(x, lambd=-1.0):
-    return GradReverse(lambd)(x)
+def grad_reverse(x):
+    # return GradReverse(lambd)(x)
+    grad = GradReverse()
+    return grad.apply(x)
 
 class ResBase50(nn.Module):
     def __init__(self):
@@ -41,7 +57,7 @@ class ResBase50(nn.Module):
         x = self.relu(x)
         x = self.maxpool(x)
         if reversed == True:
-            x = grad_reverse(x, -1)
+            x = grad_reverse(x)
         x = self.layer1(x)
         # if reversed == True:
         #     x = grad_reverse(x, -1)
