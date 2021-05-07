@@ -18,13 +18,14 @@ from utils import CLEFImage, weights_init, print_args
 from model.net import ResBase50, ResClassifier, grad_reverse
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--data_root", default='data/OfficeHome/list')
+parser.add_argument("--data_list_root", default='data/OfficeHome/list')
+parser.add_argument("--data_root", default='data/OfficeHome')
 parser.add_argument("--source", default='Art')
 parser.add_argument("--target", default='Clipart')
 parser.add_argument("--batch_size", default=32)
 parser.add_argument("--shuffle", default=True)
 parser.add_argument("--num_workers", default=0)
-parser.add_argument("--epoch", default=120, type=int)
+parser.add_argument("--epoch", default=150, type=int)
 parser.add_argument("--snapshot", default="")
 parser.add_argument("--lr", default=0.001)
 parser.add_argument("--class_num", default=65)
@@ -35,13 +36,14 @@ parser.add_argument("--task", default='None', type=str)
 parser.add_argument("--post", default='-1', type=str)
 parser.add_argument("--repeat", default='-1', type=str)
 parser.add_argument("--num_k", default=1)
+parser.add_argument("--result", default='record')
 args = parser.parse_args()
 print_args(args)
 
-source_root = 'data/OfficeHome/'+args.source
-source_label = os.path.join(args.data_root, args.source+'.txt')
-target_root = 'data/OfficeHome/'+args.target
-target_label = os.path.join(args.data_root, args.target+'.txt')
+source_root = os.path.join(args.data_root, args.source)
+source_label = os.path.join(args.data_list_root, args.source+'.txt')
+target_root = os.path.join(args.data_root, args.target)
+target_label = os.path.join(args.data_list_root, args.target+'.txt')
 
 train_transform = transforms.Compose([
     transforms.Scale((256, 256)),
@@ -76,12 +78,16 @@ def get_entropy_loss(p_softmax):
 
 opt_g = optim.SGD(netG.parameters(), lr=args.lr, weight_decay=0.0005)
 opt_f = optim.SGD(netF.parameters(), lr=args.lr, momentum=0.9, weight_decay=0.0005)
+max_correct = 0
+max_epoch = 0
+
 for epoch in range(1, args.epoch+1):
     source_loader_iter = iter(source_loader)
     target_loader_iter = iter(target_loader)
     print(">>training " + args.task + " epoch : " + str(epoch))
 
-
+    netG.train()
+    netF.train()
     for i, (t_imgs, _) in tqdm.tqdm(enumerate(target_loader_iter)):
         try:
             s_imgs, s_labels = source_loader_iter.next()
@@ -134,6 +140,68 @@ for epoch in range(1, args.epoch+1):
         opt_g.step()
         opt_f.step()
     
-    if epoch % 1 == 0:
-        torch.save(netG.state_dict(), os.path.join(args.snapshot, "ImageHome_IAFN_" + args.task + "_netG_" + args.post + '.' + args.repeat + '_' + str(epoch) + ".pth"))
-        torch.save(netF.state_dict(), os.path.join(args.snapshot, "ImageHome_IAFN_" + args.task + "_netF_" + args.post + '.' + args.repeat + '_'  + str(epoch) + ".pth"))
+    # if epoch % 1 == 0:
+    #     torch.save(netG.state_dict(), os.path.join(args.snapshot, "ImageHome_IAFN_" + args.task + "_netG_" + args.post + '.' + args.repeat + '_' + str(epoch) + ".pth"))
+    #     torch.save(netF.state_dict(), os.path.join(args.snapshot, "ImageHome_IAFN_" + args.task + "_netF_" + args.post + '.' + args.repeat + '_'  + str(epoch) + ".pth"))
+    netG.eval()
+    netF.eval()
+    correct = 0
+    t_loader = torch.utils.data.DataLoader(target_set, batch_size=args.batch_size, shuffle=args.shuffle, num_workers=args.num_workers)
+    s_loader = torch.utils.data.DataLoader(target_set, batch_size=args.batch_size, shuffle=args.shuffle, num_workers=args.num_workers)
+    feat_s_list = []
+    feat_t_list = []
+    feat_s_label_list = []
+    feat_t_label_list = []
+    source_loader_iter = iter(s_loader)
+    target_loader_iter = iter(t_loader)
+    # for (t_imgs, t_labels) in t_loader:
+    for i, (t_imgs, t_labels) in tqdm.tqdm(enumerate(target_loader_iter)):
+        s_imgs, s_labels = source_loader_iter.next()
+        t_imgs = Variable(t_imgs.cuda())
+        t_bottleneck = netG(t_imgs, reversed=False)
+        t_fc2_emb, t_logit = netF(t_bottleneck)
+        s_imgs = Variable(s_imgs.cuda())
+
+        pred = F.softmax(t_logit)
+        pred = pred.data.cpu().numpy()
+        pred = pred.argmax(axis=1)
+        t_labels = t_labels.numpy()
+        correct += np.equal(t_labels, pred).sum()
+        if len(feat_t_list) == 0:
+            feat_t_list = torch.Tensor.cpu(t_bottleneck).detach().numpy()
+            feat_t_label_list = t_labels
+            feat_s_list = torch.Tensor.cpu(netG(s_imgs)).detach().numpy()
+            feat_s_label_list = s_labels.numpy()
+        else:
+            feat_t_list = np.concatenate((feat_t_list, torch.Tensor.cpu(t_bottleneck).detach().numpy()), axis=0)
+            feat_t_label_list = np.concatenate((feat_t_label_list, t_labels), axis=0)
+            feat_s_list = np.concatenate((feat_s_list, torch.Tensor.cpu(netG(s_imgs)).detach().numpy()), axis=0)
+            feat_s_label_list = np.concatenate((feat_s_label_list, s_labels.numpy()), axis=0)
+    t_imgs = []
+    t_bottleneck = []
+    t_logit = []
+    t_fc2_emb = []
+    pred = []
+    t_labels = []
+
+    # compute classification accuracy for target domain
+    correct = correct * 1.0 / len(target_set)
+    # correct_array.append(correct)
+
+    if correct >= max_correct:
+        max_correct = correct
+        max_epoch = epoch
+        if args.save:
+            np.save("tsnedata/"+args.task + '_TSL3_feat_s_list_max.npy', feat_s_list) 
+            np.save("tsnedata/"+args.task + '_TSL3_feat_t_list_max.npy', feat_t_list)
+            np.save("tsnedata/"+args.task + '_TSL3_feat_s_label_list_max.npy', feat_s_label_list) 
+            np.save("tsnedata/"+args.task + '_TSL3_feat_t_label_list_max.npy', feat_t_label_list)
+    print ("Epoch {0} accuray: {1}; max acc: {2} @ {3}".format(epoch, correct, max_correct, max_epoch))
+    result = open(os.path.join(args.result, "OfficeHome_sourceonly_" + args.task + '_' + args.post + '.' + args.repeat +"_score.txt"), "a")
+    result.write("Epoch " + str(epoch) + ": " + str(correct) + "\n")
+    result.close()
+
+print ("Max: {0}".format(max_correct))
+result = open(os.path.join(args.result, "OfficeHome_TSL_" + args.task+ "_revLayer_" + args.revLayer + '_' + args.post + '.' + args.repeat +"_score.txt"), "a")
+result.write("Max: {0}".format(max_correct))
+result.close()

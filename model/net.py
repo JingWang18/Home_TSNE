@@ -40,12 +40,14 @@ class ResBase50(nn.Module):
         x = self.bn1(x)
         x = self.relu(x)
         x = self.maxpool(x)
+        if reversed == True:
+            x = grad_reverse(x, -1)
         x = self.layer1(x)
-        if reversed == True:
-            x = grad_reverse(x, -1)
+        # if reversed == True:
+        #     x = grad_reverse(x, -1)
         x = self.layer2(x)
-        if reversed == True:
-            x = grad_reverse(x, -1)
+        # if reversed == True:
+        #     x = grad_reverse(x, -1)
         x = self.layer3(x)
         x = self.layer4(x)
         x = self.avgpool(x)
