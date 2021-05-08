@@ -198,11 +198,11 @@ for epoch in range(1, args.epoch+1):
             np.save("tsnedata/"+args.task + '_TSL3_feat_s_label_list_max.npy', feat_s_label_list) 
             np.save("tsnedata/"+args.task + '_TSL3_feat_t_label_list_max.npy', feat_t_label_list)
     print ("Epoch {0} accuray: {1}; max acc: {2} @ {3}".format(epoch, correct, max_correct, max_epoch))
-    result = open(os.path.join(args.result, "OfficeHome_sourceonly_" + args.task + '_' + args.post + '.' + args.repeat +"_score.txt"), "a")
+    result = open(os.path.join(args.result, "OfficeHome_TSL_" + args.task + '_' + args.post + '.' + args.repeat +"_score.txt"), "a")
     result.write("Epoch " + str(epoch) + ": " + str(correct) + "\n")
     result.close()
 
 print ("Max: {0}".format(max_correct))
-result = open(os.path.join(args.result, "OfficeHome_TSL_" + args.task+ "_revLayer_" + args.revLayer + '_' + args.post + '.' + args.repeat +"_score.txt"), "a")
+result = open(os.path.join(args.result, "OfficeHome_TSL_" + args.task+ '_' + args.post + '.' + args.repeat +"_score.txt"), "a")
 result.write("Max: {0}".format(max_correct))
 result.close()
