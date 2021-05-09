@@ -5,10 +5,10 @@ import itertools
 import os
 import seaborn as sns
 
-feature_s = np.load('AC_TSL3_feat_s_list_max.npy')
-feature_t = np.load('AC_TSL3_feat_t_list_max.npy')
-label_s = np.load('AC_TSL3_feat_s_label_list_max.npy')
-label_t = np.load('AC_TSL3_feat_t_label_list_max.npy')
+feature_s = np.load('AR_TSL3_feat_s_list_max.npy')
+feature_t = np.load('AR_TSL3_feat_t_list_max.npy')
+label_s = np.load('AR_TSL3_feat_s_label_list_max.npy')
+label_t = np.load('AR_TSL3_feat_t_label_list_max.npy')
 
 # feature_s_sourceonly = np.load('AR_sourceonly_feat_s_list_max.npy')
 # feature_t_sourceonly = np.load('AR_sourceonly_feat_t_list_max.npy')
@@ -87,7 +87,7 @@ def plot_embedding(X, y, d, training_mode, save_name):
 	plt.savefig(fig_name)
 	print('{} is saved'.format(fig_name))
 
-draw_tsne(feature_s, feature_t, label_s, label_t, name = 'TSL3_AC_tsne')
+draw_tsne(feature_s, feature_t, label_s, label_t, name = 'TSL3_AR_tsne')
 # draw_tsne(feature_s, feature_t, label_s, label_t, name = 'TSL_AR_tsne')
 # draw_tsne(feature_s_sourceonly, feature_t_sourceonly, label_s_sourceonly, label_s_sourceonly, name = 'sourceonly_tsne')
 
